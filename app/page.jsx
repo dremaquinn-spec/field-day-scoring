@@ -1,10 +1,72 @@
-"use client";
+"use client";"usecia", "Guerra", "Verdugo", "Robinson", "Espinoza"]
+};
 
+const EVENTS_BY_GRADE = {
+  "Pre-K": ["Hurdle Relay","Baton Relay","Flag Relay","Pancake Relay","Hippity Hop Relay","Hula Hoop Bean Bag","Tug of War – Girls","Tug of War – Boys"],
+  "Kinder": ["Hurdle Relay","Baton Relay","Flag Relay","Pancake Relay","Cone Flip Relay","Hippity Hop Relay","Tire Roll","Dash Relay","Relay #9","Tug of War – Girls","Tug of War – Boys"],
+  "1st": ["Hurdle Relay","Baton Relay","Flag Relay","Pancake Relay","Cone Flip Relay","Hippity Hop Relay","Tire Roll","Dash Relay","Relay #9","Tug of War – Girls","Tug of War – Boys"],
+  "2nd": ["Hurdle Relay","Baton Relay","Flag Relay","Sack Relay","Pancake Relay","3-Legged Race","Hippity Hop Relay","Tire Roll","Dash Race – Girls","Dash Race – Boys","Tug of War – Girls","Tug of War – Boys"],
+  "3rd": ["Hurdle Relay","Baton Relay","Flag Relay","Sack Relay","Jump Rope Relay","3-Legged Race","Hippity Hop Relay","Tire Roll","Dash Race – Girls","Dash Race – Boys","Tug of War – Girls","Tug of War – Boys"],
+  "4th": ["3-Legged Race","Sack Relay","Hippity Hop Relay","Tire Roll","Hurdle Race","Baton Relay","Pancake Relay","Jump Rope Relay","Flag Relay","50m Dash – Girls","50m Dash – Boys","75m Dash – Girls","75m Dash – Boys","Tug of War – Girls","Tug of War – Boys"]
+};
+
+const MEDALS = ["🥇","🥈","🥉"];
+
+/* ===== APP ===== */
+
+export default function FieldDayApp() {
+  const [grade,setGrade] = useState("Pre-K");
+  const [eventIndex,setEventIndex] = useState(0);
+  const [placements,setPlacements] = useState([]);
+
+  const event = EVENTS_BY_GRADE[grade][eventIndex];
+
+  const addPlacement = (teacher) => {
+    if (placements.length < 3) {
+      setPlacements([...placements, teacher]);
+    }
+  };
+
+  const saveEvent = () => {
+    if (placements.length !== 3) return;
+    setPlacements([]);
+    setEventIndex(i => Math.min(i+1, EVENTS_BY_GRADE[grade].length-1));
+  };
+
+  return (
+    <div style={{padding:20, maxWidth:600, margin:"auto"}}>
+      <h1>⚡ Field Day Scoring</h1>
+
+      <div>
+        {Object.keys(TEACHERS_BY_GRADE).map(g => (
+          <button key={g} onClick={() => {setGrade(g); setEventIndex(0); setPlacements([]);}}>
+            {g}
+          </button>
+        ))}
+      </div>
+
+      <h2>{grade}</h2>
+      <h3>Event: {event}</h3>
+
+      <div>
+        {TEACHERS_BY_GRADE[grade].map(t => (
+          <button key={t} onClick={() => addPlacement(t)}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      <div>
+        {placements.map((p,i) => <div key={i}>{MEDALS[i]} {p}</div>)}
+      </div>
+
+      <button onClick={saveEvent}>✅ Save Event & Advance</button>
+    </div>
+  );
+}
 import { useState } from "react";
 
-/* ===============================
-   DATA
-================================ */
+/* ===== DATA ===== */
 
 const TEACHERS_BY_GRADE = {
   "Pre-K": ["Lopez", "Dugat", "Bradford", "Castaneda", "Hance"],
@@ -12,119 +74,3 @@ const TEACHERS_BY_GRADE = {
   "1st": ["Pena", "Johnson", "Y. Mendez", "Cortez", "Molina"],
   "2nd": ["Ferguson", "Aguiar", "M. Mendez", "Haji", "Howard", "King"],
   "3rd": ["Ryan", "Vasquez", "Kelley", "Galvez", "Matthews", "Stereff", "Moon"],
-  "4th": ["Tran", "Rios", "Garcia", "Guerra", "Verdugo", "Robinson", "Espinoza"]
-};
-
-const EVENTS_BY_GRADE = {
-  "Pre-K": [
-    { name: "Hurdle Relay" },
-    { name: "Baton Relay" },
-    { name: "Flag Relay" },
-    { name: "Pancake Relay" },
-    { name: "Hippity Hop Relay" },
-    { name: "Hula Hoop Bean Bag" },
-    { name: "Tug of War – Girls" },
-    { name: "Tug of War – Boys" }
-  ],
-  "Kinder": [
-    { name: "Hurdle Relay" },
-    { name: "Baton Relay" },
-    { name: "Flag Relay" },
-    { name: "Pancake Relay" },
-    { name: "Cone Flip Relay" },
-    { name: "Hippity Hop Relay" },
-    { name: "Tire Roll" },
-    { name: "Dash Relay" },
-    { name: "Relay #9" },
-    { name: "Tug of War – Girls" },
-    { name: "Tug of War – Boys" }
-  ],
-  "1st": [
-    { name: "Hurdle Relay" },
-    { name: "Baton Relay" },
-    { name: "Flag Relay" },
-    { name: "Pancake Relay" },
-    { name: "Cone Flip Relay" },
-    { name: "Hippity Hop Relay" },
-    { name: "Tire Roll" },
-    { name: "Dash Relay" },
-    { name: "Relay #9" },
-    { name: "Tug of War – Girls" },
-    { name: "Tug of War – Boys" }
-  ],
-  "2nd": [
-    { name: "Hurdle Relay" },
-    { name: "Baton Relay" },
-    { name: "Flag Relay" },
-    { name: "Sack Relay" },
-    { name: "Pancake Relay" },
-    { name: "3-Legged Race" },
-    { name: "Hippity Hop Relay" },
-    { name: "Tire Roll" },
-    { name: "Dash Race – Girls", heats: 2 },
-    { name: "Dash Race – Boys", heats: 2 },
-    { name: "Tug of War – Girls" },
-    { name: "Tug of War – Boys" }
-  ],
-  "3rd": [
-    { name: "Hurdle Relay" },
-    { name: "Baton Relay" },
-    { name: "Flag Relay" },
-    { name: "Sack Relay" },
-    { name: "Jump Rope Relay" },
-    { name: "3-Legged Race" },
-    { name: "Hippity Hop Relay" },
-    { name: "Tire Roll" },
-    { name: "Dash Race – Girls", heats: 2 },
-    { name: "Dash Race – Boys", heats: 2 },
-    { name: "Tug of War – Girls" },
-    { name: "Tug of War – Boys" }
-  ],
-  "4th": [
-    { name: "3-Legged Race" },
-    { name: "Sack Relay" },
-    { name: "Hippity Hop Relay" },
-    { name: "Tire Roll" },
-    { name: "Hurdle Race" },
-    { name: "Baton Relay" },
-    { name: "Pancake Relay" },
-    { name: "Jump Rope Relay" },
-    { name: "Flag Relay" },
-    { name: "50m Dash – Girls", heats: 2 },
-    { name: "50m Dash – Boys", heats: 2 },
-    { name: "75m Dash – Girls", heats: 2 },
-    { name: "75m Dash – Boys", heats: 2 },
-    { name: "Tug of War – Girls" },
-    { name: "Tug of War – Boys" }
-  ]
-};
-
-const MEDALS = ["🥇", "🥈", "🥉"];
-const POINTS = [3, 2, 1];
-
-/* ===============================
-   APP
-================================ */
-
-export default function FieldDayScoringApp() {
-  const [grade, setGrade] = useState("Pre-K");
-  const [eventIndex, setEventIndex] = useState(0);
-
-  return (
-    <div style={{ padding: 24 }}>
-      <h1>✅ Field Day Scoring App</h1>
-      <p>If you see this page, the build is fixed and working.</p>
-
-      <h2>Grades</h2>
-      {Object.keys(TEACHERS_BY_GRADE).map(g => (
-        <button key={g} onClick={() => setGrade(g)}>
-          {g}
-        </button>
-      ))}
-
-      <h3>Current Grade: {grade}</h3>
-      <p>First Event: {EVENTS_BY_GRADE[grade][eventIndex].name}</p>
-    </div>
-  );
-}
-``
