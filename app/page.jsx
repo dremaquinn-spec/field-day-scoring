@@ -1,5 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+/* ===================== DATA ===================== */
 
 const TEACHERS_BY_GRADE = {
   "Pre-K": ["Lopez", "Dugat", "Bradford", "Castaneda", "Hance"],
@@ -11,108 +13,50 @@ const TEACHERS_BY_GRADE = {
 };
 
 const EVENTS_BY_GRADE = {
-  "Pre-K": [
-    "Hurdle Relay",
-    "Baton Relay",
-    "Flag Relay",
-    "Pancake Relay",
-    "Hippity Hop Relay",
-    "Hula Hoop Bean Bag",
-    "Tug of War – Girls",
-    "Tug of War – Boys"
-  ],
-
-  "Kinder": [
-    "Hurdle Relay",
-    "Baton Relay",
-    "Flag Relay",
-    "Pancake Relay",
-    "Cone Flip Relay",
-    "Hippity Hop Relay",
-    "Tire Roll",
-    "Dash Relay",
-    "Relay #9",
-    "Tug of War – Girls",
-    "Tug of War – Boys"
-  ],
-
-  "1st": [
-    "Hurdle Relay",
-    "Baton Relay",
-    "Flag Relay",
-    "Pancake Relay",
-    "Cone Flip Relay",
-    "Hippity Hop Relay",
-    "Tire Roll",
-    "Dash Relay",
-    "Relay #9",
-    "Tug of War – Girls",
-    "Tug of War – Boys"
-  ],
-
-  "2nd": [
-    "Hurdle Relay",
-    "Baton Relay",
-    "Flag Relay",
-    "Sack Relay",
-    "Pancake Relay",
-    "3-Legged Race",
-    "Hippity Hop Relay",
-    "Tire Roll",
-    "Dash Race – Girls",
-    "Dash Race – Boys",
-    "Tug of War – Girls",
-    "Tug of War – Boys"
-  ],
-
-  "3rd": [
-    "Hurdle Relay",
-    "Baton Relay",
-    "Flag Relay",
-    "Sack Relay",
-    "Jump Rope Relay",
-    "3-Legged Race",
-    "Hippity Hop Relay",
-    "Tire Roll",
-    "Dash Race – Girls",
-    "Dash Race – Boys",
-    "Tug of War – Girls",
-    "Tug of War – Boys"
-  ],
-
-  "4th": [
-    "3-Legged Race",
-    "Sack Relay",
-    "Hippity Hop Relay",
-    "Tire Roll",
-    "Hurdle Race",
-    "Baton Relay",
-    "Pancake Relay",
-    "Jump Rope Relay",
-    "Flag Relay",
-    "50m Dash – Girls",
-    "50m Dash – Boys",
-    "75m Dash – Girls",
-    "75m Dash – Boys",
-    "Tug of War – Girls",
-    "Tug of War – Boys"
-  ]
+  "Pre-K": ["Hurdle Relay","Baton Relay","Flag Relay","Pancake Relay","Hippity Hop Relay","Hula Hoop Bean Bag","Tug of War – Girls","Tug of War – Boys"],
+  "Kinder": ["Hurdle Relay","Baton Relay","Flag Relay","Pancake Relay","Cone Flip Relay","Hippity Hop Relay","Tire Roll","Dash Relay","Relay #9","Tug of War – Girls","Tug of War – Boys"],
+  "1st": ["Hurdle Relay","Baton Relay","Flag Relay","Pancake Relay","Cone Flip Relay","Hippity Hop Relay","Tire Roll","Dash Relay","Relay #9","Tug of War – Girls","Tug of War – Boys"],
+  "2nd": ["Hurdle Relay","Baton Relay","Flag Relay","Sack Relay","Pancake Relay","3-Legged Race","Hippity Hop Relay","Tire Roll","Dash Race – Girls","Dash Race – Boys","Tug of War – Girls","Tug of War – Boys"],
+  "3rd": ["Hurdle Relay","Baton Relay","Flag Relay","Sack Relay","Jump Rope Relay","3-Legged Race","Hippity Hop Relay","Tire Roll","Dash Race – Girls","Dash Race – Boys","Tug of War – Girls","Tug of War – Boys"],
+  "4th": ["3-Legged Race","Sack Relay","Hippity Hop Relay","Tire Roll","Hurdle Race","Baton Relay","Pancake Relay","Jump Rope Relay","Flag Relay","50m Dash – Girls","50m Dash – Boys","75m Dash – Girls","75m Dash – Boys","Tug of War – Girls","Tug of War – Boys"]
 };
 
-const MEDALS = { 1: "🥇", 2: "🥈", 3: "🥉" };
 const POINTS = { 1: 3, 2: 2, 3: 1 };
+const MEDALS = { 1: "🥇", 2: "🥈", 3: "🥉" };
+
+/* ===================== APP ===================== */
 
 export default function FieldDayScoringApp() {
   const [grade, setGrade] = useState("Pre-K");
   const [eventIndex, setEventIndex] = useState(0);
-  const [showResults, setShowResults] = useState(false);
-  const [scores, setScores] = useState({});
   const [placements, setPlacements] = useState({ 1: [], 2: [], 3: [] });
+  const [scores, setScores] = useState({});
+  const [lockedGrades, setLockedGrades] = useState({});
+
+  /* ---------- LOAD SAVED DATA ---------- */
+  useEffect(() => {
+    const saved = localStorage.getItem("field_day_data");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      setScores(parsed.scores || {});
+      setLockedGrades(parsed.lockedGrades || {});
+    }
+  }, []);
+
+  /* ---------- SAVE DATA ---------- */
+  useEffect(() => {
+    localStorage.setItem(
+      "field_day_data",
+      JSON.stringify({ scores, lockedGrades })
+    );
+  }, [scores, lockedGrades]);
 
   const event = EVENTS_BY_GRADE[grade][eventIndex];
   const isLastEvent = eventIndex === EVENTS_BY_GRADE[grade].length - 1;
+  const isLocked = lockedGrades[grade];
 
   const toggleTeacher = (place, teacher) => {
+    if (isLocked) return;
     setPlacements(prev => ({
       ...prev,
       [place]: prev[place].includes(teacher)
@@ -122,91 +66,83 @@ export default function FieldDayScoringApp() {
   };
 
   const saveAndNext = () => {
+    if (isLocked) return;
     setScores(prev => {
-      const next = { ...prev };
+      const updated = { ...(prev[grade] || {}) };
       [1,2,3].forEach(place => {
         placements[place].forEach(t => {
-          next[t] = (next[t] || 0) + POINTS[place];
+          updated[t] = (updated[t] || 0) + POINTS[place];
         });
       });
-      return next;
+      return { ...prev, [grade]: updated };
     });
 
     setPlacements({ 1: [], 2: [], 3: [] });
 
-    if (isLastEvent) {
-      setShowResults(true);
-    } else {
+    if (!isLastEvent) {
       setEventIndex(i => i + 1);
     }
   };
 
-  const leaderboard = Object.entries(scores)
-    .sort((a,b) => b[1] - a[1])
-    .slice(0,3);
+  const finalizeGrade = () => {
+    setLockedGrades(prev => ({ ...prev, [grade]: true }));
+  };
+
+  const leaderboard =
+    Object.entries(scores[grade] || {})
+      .sort((a,b) => b[1] - a[1])
+      .slice(0,3);
 
   return (
     <div style={{ padding: 20, maxWidth: 900, margin: "auto" }}>
       <h1>⚡ Field Day Scoring</h1>
 
-      {/* ✅ GRADE SELECTOR (ALWAYS VISIBLE) */}
-      <div style={{ marginBottom: 12 }}>
+      <div>
         {Object.keys(TEACHERS_BY_GRADE).map(g => (
           <button
             key={g}
             onClick={() => {
               setGrade(g);
               setEventIndex(0);
-              setScores({});
               setPlacements({ 1: [], 2: [], 3: [] });
-              setShowResults(false);
             }}
           >
-            {g}
+            {lockedGrades[g] ? `🔒 ${g}` : g}
           </button>
         ))}
       </div>
 
-      {/* ✅ FINAL RESULTS VIEW */}
-      {showResults && (
-        <div>
-          <h2>🎉 FINAL RESULTS – {grade}</h2>
-          {leaderboard.map(([name, pts], i) => (
-            <h3 key={name}>{MEDALS[i+1]} {name} — {pts} pts</h3>
+      <h2>{grade}</h2>
+      <h3>Event: {event}</h3>
+
+      {[1,2,3].map(place => (
+        <div key={place} style={{ border: "1px solid #ccc", margin: 8, padding: 8 }}>
+          <strong>{MEDALS[place]}</strong>
+          {TEACHERS_BY_GRADE[grade].map(t => (
+            <button
+              key={t}
+              disabled={isLocked}
+              style={{ margin: 3, background: placements[place].includes(t) ? "#cce5ff" : "#eee" }}
+              onClick={() => toggleTeacher(place, t)}
+            >
+              {t}
+            </button>
           ))}
         </div>
+      ))}
+
+      {!isLocked && (
+        <button onClick={saveAndNext}>
+          ✅ {isLastEvent ? "Save Event" : "Save & Next Event"}
+        </button>
       )}
 
-      {/* ✅ EVENT SCORING VIEW */}
-      {!showResults && (
-        <>
-          <h2>{grade}</h2>
-          <h3>Event: {event}</h3>
-
-          {[1,2,3].map(place => (
-            <div key={place} style={{ border: "1px solid #ccc", padding: 8, marginBottom: 8 }}>
-              <strong>{MEDALS[place]} {place === 1 ? "1st" : place === 2 ? "2nd" : "3rd"} Place</strong>
-              <div>
-                {TEACHERS_BY_GRADE[grade].map(t => (
-                  <button
-                    key={t}
-                    style={{ margin: 3, background: placements[place].includes(t) ? "#cce5ff" : "#eee" }}
-                    onClick={() => toggleTeacher(place, t)}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-
-          <button onClick={saveAndNext}>
-            ✅ {isLastEvent ? "Finish & Show Results" : "Save & Next Event"}
-          </button>
-        </>
+      {isLastEvent && !isLocked && (
+        <button onClick={finalizeGrade}>
+          🔒 Finalize Grade (Lock Results)
+        </button>
       )}
 
-      {/* ✅ LIVE LEADERBOARD */}
       <hr />
       <h3>🏆 Current Standings</h3>
       {leaderboard.map(([name, pts], i) => (
