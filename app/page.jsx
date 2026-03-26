@@ -15,25 +15,19 @@ const EVENTS_BY_GRADE = {
   "Kinder": ["Hurdle Relay","Baton Relay","Flag Relay","Pancake Relay","Cone Flip Relay","Hippity Hop Relay","Tire Roll","Dash Relay","Relay #9","Tug of War – Girls","Tug of War – Boys"]
 };
 
-const MEDALS = {
-  1: "🥇",
-  2: "🥈",
-  3: "🥉"
-};
+const MEDALS = { 1: "🥇", 2: "🥈", 3: "🥉" };
+const POINTS = { 1: 3, 2: 2, 3: 1 };
 
 export default function FieldDayScoringApp() {
   const [grade, setGrade] = useState("Pre-K");
   const [eventIndex, setEventIndex] = useState(0);
+  const [showResults, setShowResults] = useState(false);
 
-  const [placements, setPlacements] = useState({
-    1: [],
-    2: [],
-    3: []
-  });
+  const [placements, setPlacements] = useState({ 1: [], 2: [], 3: [] });
+  const [scores, setScores] = useState({});
 
   const event = EVENTS_BY_GRADE[grade][eventIndex];
-
-  /* ---------- placement helpers ---------- */
+  const isLastEvent = eventIndex === EVENTS_BY_GRADE[grade].length - 1;
 
   const toggleTeacher = (place, teacher) => {
     setPlacements(prev => {
@@ -47,91 +41,72 @@ export default function FieldDayScoringApp() {
     });
   };
 
-  const clearPlace = (place) => {
-    setPlacements(prev => ({ ...prev, [place]: [] }));
-  };
+  const saveAndNext = () => {
+    setScores(prev => {
+      const updated = { ...prev };
+      [1,2,3].forEach(place => {
+        placements[place].forEach(t => {
+          updated[t] = (updated[t] || 0) + POINTS[place];
+        });
+      });
+      return updated;
+    });
 
-  const resetPlacements = () => {
     setPlacements({ 1: [], 2: [], 3: [] });
+
+    if (isLastEvent) {
+      setShowResults(true);
+    } else {
+      setEventIndex(i => i + 1);
+    }
   };
 
-  const goNextEvent = () => {
-    resetPlacements();
-    setEventIndex(i =>
-      Math.min(i + 1, EVENTS_BY_GRADE[grade].length - 1)
+  const leaderboard = Object.entries(scores)
+    .sort((a,b) => b[1] - a[1])
+    .slice(0,3);
+
+  if (showResults) {
+    return (
+      <div style={{ padding: 24 }}>
+        <h1>🎉 FINAL RESULTS – {grade}</h1>
+        {leaderboard.map(([name, pts], i) => (
+          <h2 key={name}>{MEDALS[i+1]} {name} — {pts} pts</h2>
+        ))}
+        <button onClick={() => setShowResults(false)}>⬅ Back</button>
+      </div>
     );
-  };
-
-  const goPrevEvent = () => {
-    resetPlacements();
-    setEventIndex(i => Math.max(i - 1, 0));
-  };
-
-  /* ---------- UI ---------- */
+  }
 
   return (
     <div style={{ padding: 20, maxWidth: 800, margin: "auto" }}>
       <h1>⚡ Field Day Scoring</h1>
-
-      {/* Grade Selector */}
-      <div style={{ marginBottom: 10 }}>
-        {Object.keys(TEACHERS_BY_GRADE).map(g => (
-          <button key={g} onClick={() => {
-            setGrade(g);
-            setEventIndex(0);
-            resetPlacements();
-          }}>
-            {g}
-          </button>
-        ))}
-      </div>
-
       <h2>{grade}</h2>
       <h3>Event: {event}</h3>
 
-      {/* Placement Sections */}
-      {[1, 2, 3].map(place => (
-        <div key={place} style={{
-          border: "1px solid #ccc",
-          padding: 10,
-          marginBottom: 10
-        }}>
+      {[1,2,3].map(place => (
+        <div key={place} style={{ border: "1px solid #ccc", marginBottom: 8, padding: 8 }}>
           <h3>{MEDALS[place]} {place === 1 ? "1st" : place === 2 ? "2nd" : "3rd"} Place</h3>
-
           {TEACHERS_BY_GRADE[grade].map(t => (
             <button
               key={t}
-              style={{
-                background: placements[place].includes(t) ? "#cce5ff" : "#eee",
-                margin: 3
-              }}
+              style={{ margin: 3, background: placements[place].includes(t) ? "#cce5ff" : "#eee" }}
               onClick={() => toggleTeacher(place, t)}
             >
               {t}
             </button>
           ))}
-
-          {placements[place].length > 0 && (
-            <div>
-              <strong>Selected:</strong> {placements[place].join(", ")}
-              <div>
-                <button onClick={() => clearPlace(place)}>Undo {MEDALS[place]}</button>
-              </div>
-            </div>
-          )}
         </div>
       ))}
 
-      {/* Navigation */}
-      <div style={{ marginTop: 20 }}>
-        <button onClick={goPrevEvent} disabled={eventIndex === 0}>
-          ⬅ Previous Event
-        </button>
-        <button onClick={goNextEvent}>
-          ✅ Save & Next Event
-        </button>
-      </div>
+      <button onClick={saveAndNext}>
+        ✅ {isLastEvent ? "Finish & Show Results" : "Save & Next Event"}
+      </button>
+
+      <hr />
+      <h3>🏆 Current Standings</h3>
+      {leaderboard.map(([name, pts], i) => (
+        <div key={name}>{MEDALS[i+1]} {name} — {pts} pts</div>
+      ))}
     </div>
   );
 }
-``
