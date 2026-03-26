@@ -15,55 +15,123 @@ const EVENTS_BY_GRADE = {
   "Kinder": ["Hurdle Relay","Baton Relay","Flag Relay","Pancake Relay","Cone Flip Relay","Hippity Hop Relay","Tire Roll","Dash Relay","Relay #9","Tug of War – Girls","Tug of War – Boys"]
 };
 
-const MEDALS = ["🥇","🥈","🥉"];
+const MEDALS = {
+  1: "🥇",
+  2: "🥈",
+  3: "🥉"
+};
 
 export default function FieldDayScoringApp() {
   const [grade, setGrade] = useState("Pre-K");
   const [eventIndex, setEventIndex] = useState(0);
-  const [placements, setPlacements] = useState([]);
+
+  const [placements, setPlacements] = useState({
+    1: [],
+    2: [],
+    3: []
+  });
 
   const event = EVENTS_BY_GRADE[grade][eventIndex];
 
+  /* ---------- placement helpers ---------- */
+
+  const toggleTeacher = (place, teacher) => {
+    setPlacements(prev => {
+      const exists = prev[place].includes(teacher);
+      return {
+        ...prev,
+        [place]: exists
+          ? prev[place].filter(t => t !== teacher)
+          : [...prev[place], teacher]
+      };
+    });
+  };
+
+  const clearPlace = (place) => {
+    setPlacements(prev => ({ ...prev, [place]: [] }));
+  };
+
+  const resetPlacements = () => {
+    setPlacements({ 1: [], 2: [], 3: [] });
+  };
+
+  const goNextEvent = () => {
+    resetPlacements();
+    setEventIndex(i =>
+      Math.min(i + 1, EVENTS_BY_GRADE[grade].length - 1)
+    );
+  };
+
+  const goPrevEvent = () => {
+    resetPlacements();
+    setEventIndex(i => Math.max(i - 1, 0));
+  };
+
+  /* ---------- UI ---------- */
+
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: 20, maxWidth: 800, margin: "auto" }}>
       <h1>⚡ Field Day Scoring</h1>
 
-      {Object.keys(TEACHERS_BY_GRADE).map(g => (
-        <button
-          key={g}
-          onClick={() => {
+      {/* Grade Selector */}
+      <div style={{ marginBottom: 10 }}>
+        {Object.keys(TEACHERS_BY_GRADE).map(g => (
+          <button key={g} onClick={() => {
             setGrade(g);
             setEventIndex(0);
-            setPlacements([]);
-          }}
-        >
-          {g}
-        </button>
-      ))}
+            resetPlacements();
+          }}>
+            {g}
+          </button>
+        ))}
+      </div>
 
       <h2>{grade}</h2>
       <h3>Event: {event}</h3>
 
-      {TEACHERS_BY_GRADE[grade].map(t => (
-        <button key={t} onClick={() =>
-          placements.length < 3 && setPlacements([...placements, t])
-        }>
-          {t}
-        </button>
-      ))}
-
-      {placements.map((p,i) => (
-        <div key={i}>{MEDALS[i]} {p}</div>
-      ))}
-
-      {placements.length === 3 && (
-        <button onClick={() => {
-          setPlacements([]);
-          setEventIndex(i => i + 1);
+      {/* Placement Sections */}
+      {[1, 2, 3].map(place => (
+        <div key={place} style={{
+          border: "1px solid #ccc",
+          padding: 10,
+          marginBottom: 10
         }}>
+          <h3>{MEDALS[place]} {place === 1 ? "1st" : place === 2 ? "2nd" : "3rd"} Place</h3>
+
+          {TEACHERS_BY_GRADE[grade].map(t => (
+            <button
+              key={t}
+              style={{
+                background: placements[place].includes(t) ? "#cce5ff" : "#eee",
+                margin: 3
+              }}
+              onClick={() => toggleTeacher(place, t)}
+            >
+              {t}
+            </button>
+          ))}
+
+          {placements[place].length > 0 && (
+            <div>
+              <strong>Selected:</strong> {placements[place].join(", ")}
+              <div>
+                <button onClick={() => clearPlace(place)}>Undo {MEDALS[place]}</button>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {/* Navigation */}
+      <div style={{ marginTop: 20 }}>
+        <button onClick={goPrevEvent} disabled={eventIndex === 0}>
+          ⬅ Previous Event
+        </button>
+        <button onClick={goNextEvent}>
           ✅ Save & Next Event
         </button>
-      )}
+      </div>
     </div>
   );
 }
+``
