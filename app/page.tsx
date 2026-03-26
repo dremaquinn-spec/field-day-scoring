@@ -107,9 +107,11 @@ const POINTS = [3, 2, 1];
 ================================ */
 
 export default function FieldDayScoringApp() {
-  const [grade, setGrade] = useState("Pre-K");
-  const [eventIndex, setEventIndex] = useState(0);
-  const [heatIndex, setHeatIndex] = useState(0);
-  const [placements, setPlacements] = useState([]);
-  const [students, setStudents] = useState(["", "", ""]);
-  const [entries, setEntries] = useState([]);
+  return (
+    <div style={{ padding: 20 }}>
+      <h1>✅ Field Day Scoring App Loaded</h1>
+      <p>If you see this, the build succeeded.</p>
+    </div>
+  );
+}
+``
