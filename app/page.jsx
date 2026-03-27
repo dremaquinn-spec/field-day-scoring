@@ -21,8 +21,8 @@ const EVENTS_BY_GRADE = {
   "4th": ["3-Legged Race","Sack Relay","Hippity Hop Relay","Tire Roll","Hurdle Race","Baton Relay","Pancake Relay","Jump Rope Relay","Flag Relay","50m Dash – Girls","50m Dash – Boys","75m Dash – Girls","75m Dash – Boys","Tug of War – Girls","Tug of War – Boys"]
 };
 
-const POINTS = { 1: 3, 2: 2, 3: 1 };
 const MEDALS = { 1: "🥇", 2: "🥈", 3: "🥉" };
+const POINTS = { 1: 3, 2: 2, 3: 1 };
 
 /* ===================== APP ===================== */
 
@@ -32,8 +32,9 @@ export default function FieldDayScoringApp() {
   const [placements, setPlacements] = useState({ 1: [], 2: [], 3: [] });
   const [scores, setScores] = useState({});
   const [lockedGrades, setLockedGrades] = useState({});
+  const [printMode, setPrintMode] = useState(false);
 
-  /* ---------- LOAD SAVED DATA ---------- */
+  /* ---------- LOAD / SAVE ---------- */
   useEffect(() => {
     const saved = localStorage.getItem("field_day_data");
     if (saved) {
@@ -43,17 +44,16 @@ export default function FieldDayScoringApp() {
     }
   }, []);
 
-  /* ---------- SAVE DATA ---------- */
   useEffect(() => {
-    localStorage.setItem(
-      "field_day_data",
-      JSON.stringify({ scores, lockedGrades })
-    );
+    localStorage.setItem("field_day_data", JSON.stringify({ scores, lockedGrades }));
   }, [scores, lockedGrades]);
 
-  const event = EVENTS_BY_GRADE[grade][eventIndex];
-  const isLastEvent = eventIndex === EVENTS_BY_GRADE[grade].length - 1;
+  const events = EVENTS_BY_GRADE[grade];
+  const event = events[eventIndex];
+  const isLastEvent = eventIndex === events.length - 1;
   const isLocked = lockedGrades[grade];
+
+  /* ---------- ACTIONS ---------- */
 
   const toggleTeacher = (place, teacher) => {
     if (isLocked) return;
@@ -67,6 +67,7 @@ export default function FieldDayScoringApp() {
 
   const saveAndNext = () => {
     if (isLocked) return;
+
     setScores(prev => {
       const updated = { ...(prev[grade] || {}) };
       [1,2,3].forEach(place => {
@@ -79,44 +80,51 @@ export default function FieldDayScoringApp() {
 
     setPlacements({ 1: [], 2: [], 3: [] });
 
-    if (!isLastEvent) {
-      setEventIndex(i => i + 1);
-    }
+    if (!isLastEvent) setEventIndex(i => i + 1);
   };
 
   const finalizeGrade = () => {
-    setLockedGrades(prev => ({ ...prev, [grade]: true }));
+    if (window.confirm(`Finalize ${grade}? This will lock all results.`)) {
+      setLockedGrades(prev => ({ ...prev, [grade]: true }));
+    }
   };
 
-  const leaderboard =
-    Object.entries(scores[grade] || {})
-      .sort((a,b) => b[1] - a[1])
-      .slice(0,3);
+  const unlockGrade = () => {
+    if (
+      window.confirm(
+        `ADMIN UNLOCK: Reopen ${grade} for editing? This should only be done to correct mistakes.`
+      )
+    ) {
+      setLockedGrades(prev => {
+        const copy = { ...prev };
+        delete copy[grade];
+        return copy;
+      });
+    }
+  };
+
+  /* ---------- UI ---------- */
 
   return (
     <div style={{ padding: 20, maxWidth: 900, margin: "auto" }}>
       <h1>⚡ Field Day Scoring</h1>
 
-      <div>
-        {Object.keys(TEACHERS_BY_GRADE).map(g => (
-          <button
-            key={g}
-            onClick={() => {
-              setGrade(g);
-              setEventIndex(0);
-              setPlacements({ 1: [], 2: [], 3: [] });
-            }}
-          >
-            {lockedGrades[g] ? `🔒 ${g}` : g}
-          </button>
-        ))}
-      </div>
+      {/* Grade Selector */}
+      {Object.keys(TEACHERS_BY_GRADE).map(g => (
+        <button key={g} onClick={() => {
+          setGrade(g);
+          setEventIndex(0);
+          setPlacements({ 1: [], 2: [], 3: [] });
+        }}>
+          {lockedGrades[g] ? `🔒 ${g}` : g}
+        </button>
+      ))}
 
       <h2>{grade}</h2>
       <h3>Event: {event}</h3>
 
       {[1,2,3].map(place => (
-        <div key={place} style={{ border: "1px solid #ccc", margin: 8, padding: 8 }}>
+        <div key={place} style={{ border: "1px solid #ccc", padding: 8, margin: 8 }}>
           <strong>{MEDALS[place]}</strong>
           {TEACHERS_BY_GRADE[grade].map(t => (
             <button
@@ -139,15 +147,21 @@ export default function FieldDayScoringApp() {
 
       {isLastEvent && !isLocked && (
         <button onClick={finalizeGrade}>
-          🔒 Finalize Grade (Lock Results)
+          🔒 Finalize Grade
         </button>
       )}
 
-      <hr />
-      <h3>🏆 Current Standings</h3>
-      {leaderboard.map(([name, pts], i) => (
-        <div key={name}>{MEDALS[i+1]} {name} — {pts} pts</div>
-      ))}
+      {isLocked && (
+        <button style={{ background: "#ffcccc" }} onClick={unlockGrade}>
+          🔓 Admin Unlock Grade
+        </button>
+      )}
+
+      {isLocked && (
+        <button onClick={() => setPrintMode(true)}>
+          🖨 Printable Ribbon Sheets
+        </button>
+      )}
     </div>
   );
 }
