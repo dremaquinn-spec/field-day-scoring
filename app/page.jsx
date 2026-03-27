@@ -1,4 +1,7 @@
-"use client";"use clientEffect, useState } from "react";
+
+use client";
+
+import { useEffect, useState } from "react";
 
 /* ===================== DATA ===================== */
 
