@@ -1,6 +1,4 @@
-"use client";
-
-import { useEffect, useState } from "react";
+"use client";"use clientEffect, useState } from "react";
 
 /* ===================== DATA ===================== */
 
@@ -54,6 +52,7 @@ const EVENTS_BY_GRADE = {
 };
 
 const POINTS = { 1: 3, 2: 2, 3: 1 };
+const PLACES = { 1: "1st", 2: "2nd", 3: "3rd" };
 
 /* ===================== APP ===================== */
 
@@ -63,6 +62,8 @@ export default function FieldDayScoringApp() {
   const [placements, setPlacements] = useState({ 1: [], 2: [], 3: [] });
   const [scores, setScores] = useState({});
   const [lockedGrades, setLockedGrades] = useState({});
+
+  /* ---------- LOAD / SAVE ---------- */
 
   useEffect(() => {
     const saved = localStorage.getItem("field_day_data");
@@ -87,8 +88,11 @@ export default function FieldDayScoringApp() {
 
   const selectedTeachers = Object.values(placements).flat();
 
+  /* ---------- ACTIONS ---------- */
+
   const toggleTeacher = (place, teacher) => {
     if (isLocked) return;
+
     setPlacements(prev => ({
       ...prev,
       [place]: prev[place].includes(teacher)
@@ -97,7 +101,7 @@ export default function FieldDayScoringApp() {
     }));
   };
 
-  const saveAndNext = () => {
+  const saveEvent = () => {
     if (isLocked) return;
 
     setScores(prev => {
@@ -111,8 +115,22 @@ export default function FieldDayScoringApp() {
     });
 
     setPlacements({ 1: [], 2: [], 3: [] });
-    if (!isLastEvent) setEventIndex(i => i + 1);
+
+    if (isLastEvent) {
+      // ✅ FINAL EVENT: auto-lock grade to prevent double counting
+      setLockedGrades(prev => ({ ...prev, [grade]: true }));
+    } else {
+      setEventIndex(i => i + 1);
+    }
   };
+
+  /* ---------- LEADERBOARD ---------- */
+
+  const leaderboard = Object.entries(scores[grade] || {})
+    .sort((a,b) => b[1] - a[1])
+    .slice(0,3);
+
+  /* ---------- UI ---------- */
 
   return (
     <div style={{ padding: 20, maxWidth: 900, margin: "auto" }}>
@@ -135,17 +153,21 @@ export default function FieldDayScoringApp() {
       <h3>Event: {event}</h3>
 
       {[1,2,3].map(place => (
-        <div key={place} style={{ border: "1px solid #ccc", margin: 8, padding: 8 }}>
-          <strong>{place === 1 ? "1st" : place === 2 ? "2nd" : "3rd"} Place</strong>
+        <div
+          key={place}
+          style={{ border: "1px solid #ccc", margin: 8, padding: 8 }}
+        >
+          <strong>{PLACES[place]} Place</strong>
 
           {TEACHERS_BY_GRADE[grade].map(t => {
             const selectedHere = placements[place].includes(t);
-            const selectedElsewhere = !selectedHere && selectedTeachers.includes(t);
+            const selectedElsewhere =
+              !selectedHere && selectedTeachers.includes(t);
 
             return (
               <button
                 key={t}
-                disabled={selectedElsewhere || isLocked}
+                disabled={isLocked || selectedElsewhere}
                 onClick={() => toggleTeacher(place, t)}
                 style={{
                   margin: 4,
@@ -163,8 +185,8 @@ export default function FieldDayScoringApp() {
       ))}
 
       {!isLocked && (
-        <button onClick={saveAndNext}>
-          {isLastEvent ? "Save Event" : "Save & Next Event"}
+        <button onClick={saveEvent}>
+          {isLastEvent ? "Finalize Event and Lock Grade" : "Save & Next Event"}
         </button>
       )}
 
@@ -172,14 +194,15 @@ export default function FieldDayScoringApp() {
 
       <h3>Current Standings</h3>
 
-      {Object.entries(scores[grade] || {})
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([name, pts], index) => (
-          <div key={name}>
-            {index + 1}. {name} — {pts} pts
-          </div>
-        ))}
+      {leaderboard.length === 0 && <div>No scores yet</div>}
+
+      {leaderboard.map(([name, pts], index) => (
+        <div key={name}>
+          {index + 1}. {name} — {pts} pts
+        </div>
+      ))}
     </div>
   );
 }
+
+
