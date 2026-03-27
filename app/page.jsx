@@ -14,56 +14,26 @@ const TEACHERS_BY_GRADE = {
 };
 
 const EVENTS_BY_GRADE = {
-  "Pre-K": [
-    "Hurdle Relay","Baton Relay","Flag Relay","Pancake Relay",
-    "Hippity Hop Relay","Hula Hoop Bean Bag",
-    "Tug of War – Girls","Tug of War – Boys"
-  ],
-  "Kinder": [
-    "Hurdle Relay","Baton Relay","Flag Relay","Pancake Relay",
-    "Cone Flip Relay","Hippity Hop Relay","Tire Roll",
-    "Dash Relay","Relay #9",
-    "Tug of War – Girls","Tug of War – Boys"
-  ],
-  "1st": [
-    "Hurdle Relay","Baton Relay","Flag Relay","Pancake Relay",
-    "Cone Flip Relay","Hippity Hop Relay","Tire Roll",
-    "Dash Relay","Relay #9",
-    "Tug of War – Girls","Tug of War – Boys"
-  ],
-  "2nd": [
-    "Hurdle Relay","Baton Relay","Flag Relay","Sack Relay",
-    "Pancake Relay","3-Legged Race","Hippity Hop Relay","Tire Roll",
-    "Dash Race – Girls","Dash Race – Boys",
-    "Tug of War – Girls","Tug of War – Boys"
-  ],
-  "3rd": [
-    "Hurdle Relay","Baton Relay","Flag Relay","Sack Relay",
-    "Jump Rope Relay","3-Legged Race","Hippity Hop Relay","Tire Roll",
-    "Dash Race – Girls","Dash Race – Boys",
-    "Tug of War – Girls","Tug of War – Boys"
-  ],
-  "4th": [
-    "3-Legged Race","Sack Relay","Hippity Hop Relay","Tire Roll",
-    "Hurdle Race","Baton Relay","Pancake Relay","Jump Rope Relay",
-    "Flag Relay",
-    "50m Dash – Girls","50m Dash – Boys",
-    "75m Dash – Girls","75m Dash – Boys",
-    "Tug of War – Girls","Tug of War – Boys"
-  ]
+  "Pre-K": ["Hurdle Relay","Baton Relay","Flag Relay","Pancake Relay","Hippity Hop Relay","Hula Hoop Bean Bag","Tug of War – Girls","Tug of War – Boys"],
+  "Kinder": ["Hurdle Relay","Baton Relay","Flag Relay","Pancake Relay","Cone Flip Relay","Hippity Hop Relay","Tire Roll","Dash Relay","Relay #9","Tug of War – Girls","Tug of War – Boys"],
+  "1st": ["Hurdle Relay","Baton Relay","Flag Relay","Pancake Relay","Cone Flip Relay","Hippity Hop Relay","Tire Roll","Dash Relay","Relay #9","Tug of War – Girls","Tug of War – Boys"],
+  "2nd": ["Hurdle Relay","Baton Relay","Flag Relay","Sack Relay","Pancake Relay","3-Legged Race","Hippity Hop Relay","Tire Roll","Dash Race – Girls","Dash Race – Boys","Tug of War – Girls","Tug of War – Boys"],
+  "3rd": ["Hurdle Relay","Baton Relay","Flag Relay","Sack Relay","Jump Rope Relay","3-Legged Race","Hippity Hop Relay","Tire Roll","Dash Race – Girls","Dash Race – Boys","Tug of War – Girls","Tug of War – Boys"],
+  "4th": ["3-Legged Race","Sack Relay","Hippity Hop Relay","Tire Roll","Hurdle Race","Baton Relay","Pancake Relay","Jump Rope Relay","Flag Relay","50m Dash – Girls","50m Dash – Boys","75m Dash – Girls","75m Dash – Boys","Tug of War – Girls","Tug of War – Boys"]
 };
 
 const POINTS = { 1: 3, 2: 2, 3: 1 };
-const PLACES = { 1: "1st", 2: "2nd", 3: "3rd" };
 
 /* ===================== APP ===================== */
 
 export default function FieldDayScoringApp() {
   const [grade, setGrade] = useState("Pre-K");
-  const [eventIndex, setEventIndex] = useState(0);
-  const [placements, setPlacements] = useState({ 1: [], 2: [], 3: [] });
+
   const [scores, setScores] = useState({});
   const [lockedGrades, setLockedGrades] = useState({});
+
+  // ✅ NEW: per-grade progress
+  const [progress, setProgress] = useState({});
 
   /* ---------- LOAD / SAVE ---------- */
 
@@ -73,15 +43,24 @@ export default function FieldDayScoringApp() {
       const parsed = JSON.parse(saved);
       setScores(parsed.scores || {});
       setLockedGrades(parsed.lockedGrades || {});
+      setProgress(parsed.progress || {});
     }
   }, []);
 
   useEffect(() => {
     localStorage.setItem(
       "field_day_data",
-      JSON.stringify({ scores, lockedGrades })
+      JSON.stringify({ scores, lockedGrades, progress })
     );
-  }, [scores, lockedGrades]);
+  }, [scores, lockedGrades, progress]);
+
+  // ✅ pull current grade state
+  const gradeProgress = progress[grade] || {
+    eventIndex: 0,
+    placements: { 1: [], 2: [], 3: [] }
+  };
+
+  const { eventIndex, placements } = gradeProgress;
 
   const events = EVENTS_BY_GRADE[grade];
   const event = events[eventIndex];
@@ -90,17 +69,28 @@ export default function FieldDayScoringApp() {
 
   const selectedTeachers = Object.values(placements).flat();
 
+  /* ---------- HELPERS ---------- */
+
+  const updateProgress = (updates) => {
+    setProgress(prev => ({
+      ...prev,
+      [grade]: { ...gradeProgress, ...updates }
+    }));
+  };
+
   /* ---------- SCORING ---------- */
 
   const toggleTeacher = (place, teacher) => {
     if (isLocked) return;
 
-    setPlacements(prev => ({
-      ...prev,
-      [place]: prev[place].includes(teacher)
-        ? prev[place].filter(t => t !== teacher)
-        : [...prev[place], teacher]
-    }));
+    updateProgress({
+      placements: {
+        ...placements,
+        [place]: placements[place].includes(teacher)
+          ? placements[place].filter(t => t !== teacher)
+          : [...placements[place], teacher]
+      }
+    });
   };
 
   const saveEvent = () => {
@@ -116,50 +106,14 @@ export default function FieldDayScoringApp() {
       return { ...prev, [grade]: updated };
     });
 
-    setPlacements({ 1: [], 2: [], 3: [] });
-
     if (isLastEvent) {
       setLockedGrades(prev => ({ ...prev, [grade]: true }));
-    } else {
-      setEventIndex(i => i + 1);
     }
-  };
 
-  /* ---------- ADMIN CONTROLS ---------- */
-
-  const adminUnlockGrade = () => {
-    if (
-      window.confirm(
-        `ADMIN UNLOCK: Reopen ${grade} for corrections?`
-      )
-    ) {
-      setLockedGrades(prev => {
-        const copy = { ...prev };
-        delete copy[grade];
-        return copy;
-      });
-    }
-  };
-
-  const resetGrade = () => {
-    if (
-      window.confirm(
-        `RESET ${grade}: This will clear ALL scores for this grade only. Other grades will not be affected.`
-      )
-    ) {
-      setScores(prev => {
-        const copy = { ...prev };
-        delete copy[grade];
-        return copy;
-      });
-      setLockedGrades(prev => {
-        const copy = { ...prev };
-        delete copy[grade];
-        return copy;
-      });
-      setPlacements({ 1: [], 2: [], 3: [] });
-      setEventIndex(0);
-    }
+    updateProgress({
+      eventIndex: isLastEvent ? eventIndex : eventIndex + 1,
+      placements: { 1: [], 2: [], 3: [] }
+    });
   };
 
   /* ---------- LEADERBOARD ---------- */
@@ -178,11 +132,7 @@ export default function FieldDayScoringApp() {
       {Object.keys(TEACHERS_BY_GRADE).map(g => (
         <button
           key={g}
-          onClick={() => {
-            setGrade(g);
-            setEventIndex(0);
-            setPlacements({ 1: [], 2: [], 3: [] });
-          }}
+          onClick={() => setGrade(g)}
         >
           {lockedGrades[g] ? "LOCKED " + g : g}
         </button>
@@ -193,7 +143,7 @@ export default function FieldDayScoringApp() {
 
       {[1,2,3].map(place => (
         <div key={place} style={{ border: "1px solid #ccc", margin: 8, padding: 8 }}>
-          <strong>{PLACES[place]} Place</strong>
+          <strong>{place === 1 ? "1st" : place === 2 ? "2nd" : "3rd"} Place</strong>
 
           {TEACHERS_BY_GRADE[grade].map(t => {
             const selectedHere = placements[place].includes(t);
@@ -227,37 +177,14 @@ export default function FieldDayScoringApp() {
       )}
 
       <hr style={{ margin: "24px 0" }} />
-
       <h3>Current Standings</h3>
-
-      {leaderboard.length === 0 && <div>No scores yet</div>}
 
       {leaderboard.map(([name, pts], index) => (
         <div key={name}>
           {index + 1}. {name} — {pts} pts
         </div>
       ))}
-
-      <hr style={{ margin: "24px 0" }} />
-
-      {/* ADMIN BUTTONS */}
-      {isLocked && (
-        <>
-          <button
-            style={{ background: "#facc15", marginRight: 8 }}
-            onClick={adminUnlockGrade}
-          >
-            Admin Unlock Grade
-          </button>
-
-          <button
-            style={{ background: "#dc2626", color: "white" }}
-            onClick={resetGrade}
-          >
-            Reset This Grade
-          </button>
-        </>
-      )}
     </div>
   );
 }
+``
