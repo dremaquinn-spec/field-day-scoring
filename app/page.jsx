@@ -165,3 +165,19 @@ export default function FieldDayScoringApp() {
     </div>
   );
 }
+<hr style={{ margin: "24px 0" }} />
+
+<h3>🏆 Current Standings</h3>
+
+{Object.keys(scores[grade] || {}).length === 0 && (
+  <div>No scores yet</div>
+)}
+
+{Object.entries(scores[grade] || {})
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 3)
+  .map(([name, pts], index) => (
+    <div key={name} style={{ fontSize: "16px", marginBottom: 4 }}>
+      {MEDALS[index + 1]} {name} — {pts} pts
+    </div>
+  ))}
