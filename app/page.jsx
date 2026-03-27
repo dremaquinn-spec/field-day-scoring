@@ -39,3 +39,225 @@ const EVENTS_BY_GRADE = {
   ],
   "3rd": [
     "Hurdle Relay","Baton Relay","Flag Relay","Sack Relay",
+    "Jump Rope Relay","3-Legged Race","Hippity Hop Relay","Tire Roll",
+    "Dash Race – Girls","Dash Race – Boys",
+    "Tug of War – Girls","Tug of War – Boys"
+  ],
+  "4th": [
+    "3-Legged Race","Sack Relay","Hippity Hop Relay","Tire Roll",
+    "Hurdle Race","Baton Relay","Pancake Relay","Jump Rope Relay",
+    "Flag Relay",
+    "50m Dash – Girls","50m Dash – Boys",
+    "75m Dash – Girls","75m Dash – Boys",
+    "Tug of War – Girls","Tug of War – Boys"
+  ]
+};
+
+const POINTS = { 1: 3, 2: 2, 3: 1 };
+const PLACES = { 1: "1st", 2: "2nd", 3: "3rd" };
+
+/* ===================== APP ===================== */
+
+export default function FieldDayScoringApp() {
+  const [grade, setGrade] = useState("Pre-K");
+  const [eventIndex, setEventIndex] = useState(0);
+  const [placements, setPlacements] = useState({ 1: [], 2: [], 3: [] });
+  const [scores, setScores] = useState({});
+  const [lockedGrades, setLockedGrades] = useState({});
+
+  /* ---------- LOAD / SAVE ---------- */
+
+  useEffect(() => {
+    const saved = localStorage.getItem("field_day_data");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      setScores(parsed.scores || {});
+      setLockedGrades(parsed.lockedGrades || {});
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(
+      "field_day_data",
+      JSON.stringify({ scores, lockedGrades })
+    );
+  }, [scores, lockedGrades]);
+
+  const events = EVENTS_BY_GRADE[grade];
+  const event = events[eventIndex];
+  const isLastEvent = eventIndex === events.length - 1;
+  const isLocked = lockedGrades[grade];
+
+  const selectedTeachers = Object.values(placements).flat();
+
+  /* ---------- SCORING ---------- */
+
+  const toggleTeacher = (place, teacher) => {
+    if (isLocked) return;
+
+    setPlacements(prev => ({
+      ...prev,
+      [place]: prev[place].includes(teacher)
+        ? prev[place].filter(t => t !== teacher)
+        : [...prev[place], teacher]
+    }));
+  };
+
+  const saveEvent = () => {
+    if (isLocked) return;
+
+    setScores(prev => {
+      const updated = { ...(prev[grade] || {}) };
+      [1,2,3].forEach(place => {
+        placements[place].forEach(t => {
+          updated[t] = (updated[t] || 0) + POINTS[place];
+        });
+      });
+      return { ...prev, [grade]: updated };
+    });
+
+    setPlacements({ 1: [], 2: [], 3: [] });
+
+    if (isLastEvent) {
+      setLockedGrades(prev => ({ ...prev, [grade]: true }));
+    } else {
+      setEventIndex(i => i + 1);
+    }
+  };
+
+  /* ---------- ADMIN CONTROLS ---------- */
+
+  const adminUnlockGrade = () => {
+    if (
+      window.confirm(
+        `ADMIN UNLOCK: Reopen ${grade} for corrections?`
+      )
+    ) {
+      setLockedGrades(prev => {
+        const copy = { ...prev };
+        delete copy[grade];
+        return copy;
+      });
+    }
+  };
+
+  const resetGrade = () => {
+    if (
+      window.confirm(
+        `RESET ${grade}: This will clear ALL scores for this grade only. Other grades will not be affected.`
+      )
+    ) {
+      setScores(prev => {
+        const copy = { ...prev };
+        delete copy[grade];
+        return copy;
+      });
+      setLockedGrades(prev => {
+        const copy = { ...prev };
+        delete copy[grade];
+        return copy;
+      });
+      setPlacements({ 1: [], 2: [], 3: [] });
+      setEventIndex(0);
+    }
+  };
+
+  /* ---------- LEADERBOARD ---------- */
+
+  const leaderboard = Object.entries(scores[grade] || {})
+    .sort((a,b) => b[1] - a[1])
+    .slice(0,3);
+
+  /* ---------- UI ---------- */
+
+  return (
+    <div style={{ padding: 20, maxWidth: 900, margin: "auto" }}>
+      <h1>Field Day Scoring</h1>
+
+      {/* Grade Selector */}
+      {Object.keys(TEACHERS_BY_GRADE).map(g => (
+        <button
+          key={g}
+          onClick={() => {
+            setGrade(g);
+            setEventIndex(0);
+            setPlacements({ 1: [], 2: [], 3: [] });
+          }}
+        >
+          {lockedGrades[g] ? "LOCKED " + g : g}
+        </button>
+      ))}
+
+      <h2>{grade}</h2>
+      <h3>Event: {event}</h3>
+
+      {[1,2,3].map(place => (
+        <div key={place} style={{ border: "1px solid #ccc", margin: 8, padding: 8 }}>
+          <strong>{PLACES[place]} Place</strong>
+
+          {TEACHERS_BY_GRADE[grade].map(t => {
+            const selectedHere = placements[place].includes(t);
+            const selectedElsewhere =
+              !selectedHere && selectedTeachers.includes(t);
+
+            return (
+              <button
+                key={t}
+                disabled={isLocked || selectedElsewhere}
+                onClick={() => toggleTeacher(place, t)}
+                style={{
+                  margin: 4,
+                  padding: "6px 10px",
+                  background: selectedHere ? "#166534" : "#f3f4f6",
+                  color: selectedHere ? "white" : "black",
+                  opacity: selectedElsewhere ? 0.4 : 1
+                }}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
+      ))}
+
+      {!isLocked && (
+        <button onClick={saveEvent}>
+          {isLastEvent ? "Finalize Event and Lock Grade" : "Save & Next Event"}
+        </button>
+      )}
+
+      <hr style={{ margin: "24px 0" }} />
+
+      <h3>Current Standings</h3>
+
+      {leaderboard.length === 0 && <div>No scores yet</div>}
+
+      {leaderboard.map(([name, pts], index) => (
+        <div key={name}>
+          {index + 1}. {name} — {pts} pts
+        </div>
+      ))}
+
+      <hr style={{ margin: "24px 0" }} />
+
+      {/* ADMIN BUTTONS */}
+      {isLocked && (
+        <>
+          <button
+            style={{ background: "#facc15", marginRight: 8 }}
+            onClick={adminUnlockGrade}
+          >
+            Admin Unlock Grade
+          </button>
+
+          <button
+            style={{ background: "#dc2626", color: "white" }}
+            onClick={resetGrade}
+          >
+            Reset This Grade
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
