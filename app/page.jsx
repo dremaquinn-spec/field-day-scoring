@@ -164,7 +164,8 @@ export default function FieldDayScoringApp() {
       )}
       <hr style={{ margin: "24px 0" }} />
 
-      <h3>🏆 Current Standings</h3>
+     <h3>{"🏆"} Current Standings</h3>
+
 
       {Object.keys(scores[grade] || {}).length === 0 && (
         <div>No scores yet</div>
