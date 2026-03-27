@@ -1,3 +1,5 @@
+
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -23,7 +25,7 @@ const EVENTS_BY_GRADE = {
 };
 
 const POINTS = { 1: 3, 2: 2, 3: 1 };
-const PLACE_LABELS = { 1: "1st", 2: "2nd", 3: "3rd" };
+const PLACES = { 1: "1st", 2: "2nd", 3: "3rd" };
 
 /* ===================== APP ===================== */
 
@@ -33,8 +35,7 @@ export default function FieldDayScoringApp() {
   const [lockedGrades, setLockedGrades] = useState({});
   const [progress, setProgress] = useState({});
 
-  /* ---------- LOAD / SAVE ---------- */
-
+  /* ---------- LOAD SAVED DATA ---------- */
   useEffect(() => {
     const saved = localStorage.getItem("field_day_data");
     if (saved) {
@@ -45,7 +46,188 @@ export default function FieldDayScoringApp() {
     }
   }, []);
 
+  /* ---------- SAVE DATA ---------- */
   useEffect(() => {
     localStorage.setItem(
       "field_day_data",
       JSON.stringify({ scores, lockedGrades, progress })
+    );
+  }, [scores, lockedGrades, progress]);
+
+  const gradeProgress = progress[grade] || {
+    eventIndex: 0,
+    placements: { 1: [], 2: [], 3: [] }
+  };
+
+  const { eventIndex, placements } = gradeProgress;
+  const events = EVENTS_BY_GRADE[grade];
+  const event = events[eventIndex];
+  const isLastEvent = eventIndex === events.length - 1;
+  const isLocked = lockedGrades[grade];
+
+  const selectedTeachers = Object.values(placements).flat();
+
+  const updateProgress = (updates) => {
+    setProgress(prev => ({
+      ...prev,
+      [grade]: { ...gradeProgress, ...updates }
+    }));
+  };
+
+  /* ---------- SCORING ---------- */
+
+  const toggleTeacher = (place, teacher) => {
+    if (isLocked) return;
+
+    updateProgress({
+      placements: {
+        ...placements,
+        [place]: placements[place].includes(teacher)
+          ? placements[place].filter(t => t !== teacher)
+          : [...placements[place], teacher]
+      }
+    });
+  };
+
+  const saveEvent = () => {
+    if (isLocked) return;
+
+    setScores(prev => {
+      const gradeScores = { ...(prev[grade] || {}) };
+      [1,2,3].forEach(place => {
+        placements[place].forEach(t => {
+          gradeScores[t] = (gradeScores[t] || 0) + POINTS[place];
+        });
+      });
+      return { ...prev, [grade]: gradeScores };
+    });
+
+    updateProgress({
+      placements: { 1: [], 2: [], 3: [] },
+      eventIndex: isLastEvent ? eventIndex : eventIndex + 1
+    });
+
+    if (isLastEvent) {
+      setLockedGrades(prev => ({ ...prev, [grade]: true }));
+    }
+  };
+
+  /* ---------- ADMIN CONTROLS ---------- */
+
+  const adminUnlockGrade = () => {
+    if (window.confirm(`Admin unlock ${grade}?`)) {
+      setLockedGrades(prev => {
+        const copy = { ...prev };
+        delete copy[grade];
+        return copy;
+      });
+    }
+  };
+
+  const resetGrade = () => {
+    if (window.confirm(`Reset ${grade}? This clears only this grade.`)) {
+      setScores(prev => {
+        const copy = { ...prev };
+        delete copy[grade];
+        return copy;
+      });
+      setLockedGrades(prev => {
+        const copy = { ...prev };
+        delete copy[grade];
+        return copy;
+      });
+      setProgress(prev => {
+        const copy = { ...prev };
+        delete copy[grade];
+        return copy;
+      });
+      setGrade("Pre-K");
+    }
+  };
+
+  /* ---------- LEADERBOARD ---------- */
+
+  const leaderboard = Object.entries(scores[grade] || {})
+    .sort((a,b) => b[1] - a[1])
+    .slice(0,3);
+
+  /* ---------- UI ---------- */
+
+  return (
+    <div style={{ padding: 20, maxWidth: 900, margin: "auto" }}>
+      <h1>Field Day Scoring</h1>
+
+      {Object.keys(TEACHERS_BY_GRADE).map(g => (
+        <button key={g} onClick={() => setGrade(g)}>
+          {lockedGrades[g] ? "LOCKED " + g : g}
+        </button>
+      ))}
+
+      <h2>{grade}</h2>
+      <h3>Event: {event}</h3>
+
+      {[1,2,3].map(place => (
+        <div key={place} style={{ border: "1px solid #ccc", margin: 8, padding: 8 }}>
+          <strong>{PLACES[place]} Place</strong>
+
+          {TEACHERS_BY_GRADE[grade].map(t => {
+            const selectedHere = placements[place].includes(t);
+            const selectedElsewhere =
+              !selectedHere && selectedTeachers.includes(t);
+
+            return (
+              <button
+                key={t}
+                disabled={isLocked || selectedElsewhere}
+                onClick={() => toggleTeacher(place, t)}
+                style={{
+                  margin: 4,
+                  padding: "6px 10px",
+                  background: selectedHere ? "#166534" : "#f3f4f6",
+                  color: selectedHere ? "white" : "black",
+                  opacity: selectedElsewhere ? 0.4 : 1
+                }}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
+      ))}
+
+      {!isLocked && (
+        <button onClick={saveEvent}>
+          {isLastEvent ? "Finalize Event and Lock Grade" : "Save & Next Event"}
+        </button>
+      )}
+
+      <hr style={{ margin: "24px 0" }} />
+      <h3>Current Standings</h3>
+
+      {leaderboard.length === 0 && <div>No scores yet</div>}
+
+      {leaderboard.map(([name, pts], index) => (
+        <div key={name}>
+          {index + 1}. {name} — {pts} pts
+        </div>
+      ))}
+
+      <hr style={{ margin: "24px 0" }} />
+
+      {isLocked && (
+        <>
+          <button onClick={adminUnlockGrade} style={{ marginRight: 8 }}>
+            Admin Unlock Grade
+          </button>
+          <button
+            onClick={resetGrade}
+            style={{ background: "#dc2626", color: "white" }}
+          >
+            Reset This Grade
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
